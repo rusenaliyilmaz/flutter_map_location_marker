@@ -1,0 +1,3 @@
+[submodule "lib/flutter_compass"]
+	path = lib/flutter_compass
+	url = https://github.com/rusenaliyilmaz/flutter_compass.git

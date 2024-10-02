@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
-import 'package:flutter_rotation_sensor/flutter_rotation_sensor.dart';
+import 'package:flutter_compass_v2/flutter_compass_v2.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 
@@ -39,8 +39,7 @@ class LocationMarkerDataStreamFactory {
   /// Create a position stream which is used as default value of
   /// [CurrentLocationLayer.positionStream].
   Stream<Position?> defaultPositionStreamSource({
-    RequestPermissionCallback? requestPermissionCallback =
-        Geolocator.requestPermission,
+    RequestPermissionCallback? requestPermissionCallback = Geolocator.requestPermission,
   }) {
     final cancelFunctions = <AsyncCallback>[];
     final streamController = StreamController<Position?>.broadcast();
@@ -48,10 +47,8 @@ class LocationMarkerDataStreamFactory {
       ..onListen = () async {
         try {
           var permission = await Geolocator.checkPermission();
-          if (permission == LocationPermission.denied &&
-              requestPermissionCallback != null) {
-            streamController.sink
-                .addError(const lm.PermissionRequestingException());
+          if (permission == LocationPermission.denied && requestPermissionCallback != null) {
+            streamController.sink.addError(const lm.PermissionRequestingException());
             permission = await requestPermissionCallback();
           }
           switch (permission) {
@@ -60,33 +57,28 @@ class LocationMarkerDataStreamFactory {
               if (streamController.isClosed) {
                 break;
               }
-              streamController.sink
-                  .addError(const lm.PermissionDeniedException());
+              streamController.sink.addError(const lm.PermissionDeniedException());
               await streamController.close();
             case LocationPermission.whileInUse:
             case LocationPermission.always:
               try {
-                final serviceEnabled =
-                    await Geolocator.isLocationServiceEnabled();
+                final serviceEnabled = await Geolocator.isLocationServiceEnabled();
                 if (streamController.isClosed) {
                   break;
                 }
                 if (!serviceEnabled) {
-                  streamController.sink
-                      .addError(const ServiceDisabledException());
+                  streamController.sink.addError(const ServiceDisabledException());
                 }
               } on Exception catch (_) {}
               try {
                 // The concept of location service doesn't exist on the web
                 // platform
                 if (!kIsWeb) {
-                  final subscription = Geolocator.getServiceStatusStream()
-                      .listen((serviceStatus) {
+                  final subscription = Geolocator.getServiceStatusStream().listen((serviceStatus) {
                     if (serviceStatus == ServiceStatus.enabled) {
                       streamController.sink.add(null);
                     } else {
-                      streamController.sink
-                          .addError(const ServiceDisabledException());
+                      streamController.sink.addError(const ServiceDisabledException());
                     }
                   });
                   cancelFunctions.add(subscription.cancel);
@@ -105,8 +97,7 @@ class LocationMarkerDataStreamFactory {
                 }
               } on Exception catch (_) {}
               try {
-                final serviceEnabled =
-                    await Geolocator.isLocationServiceEnabled();
+                final serviceEnabled = await Geolocator.isLocationServiceEnabled();
                 if (serviceEnabled) {
                   final position = await Geolocator.getCurrentPosition();
                   if (streamController.isClosed) {
@@ -115,8 +106,7 @@ class LocationMarkerDataStreamFactory {
                   streamController.sink.add(position);
                 }
               } on Exception catch (_) {}
-              final subscription =
-                  Geolocator.getPositionStream().listen((position) {
+              final subscription = Geolocator.getPositionStream().listen((position) {
                 streamController.sink.add(position);
               });
               cancelFunctions.add(subscription.cancel);
@@ -135,24 +125,23 @@ class LocationMarkerDataStreamFactory {
   }
 
   /// Cast to a heading stream from
-  /// [flutter_rotation_sensor](https://pub.dev/packages/flutter_rotation_sensor) stream.
-  Stream<LocationMarkerHeading?> fromRotationSensorHeadingStream({
-    Stream<OrientationEvent>? stream,
+  /// [flutter_compass](https://pub.dev/packages/flutter_compass) stream.
+  Stream<LocationMarkerHeading?> fromCompassHeadingStream({
+    Stream<CompassEvent?>? stream,
     double minAccuracy = pi * 0.1,
     double defAccuracy = pi * 0.3,
     double maxAccuracy = pi * 0.4,
   }) =>
-      (stream ?? defaultHeadingStreamSource()).map(
-        (e) => LocationMarkerHeading(
-          heading: e.eulerAngles.azimuth,
-          accuracy: e.accuracy >= 0
-              ? degToRadian(e.accuracy).clamp(minAccuracy, maxAccuracy)
-              : defAccuracy,
-        ),
-      );
+      (stream ?? defaultHeadingStreamSource()).where((e) => e == null || e.heading != null).map(
+            (e) => e != null
+                ? LocationMarkerHeading(
+                    heading: degToRadian(e.heading!),
+                    accuracy: e.accuracy != null ? degToRadian(e.accuracy!).clamp(minAccuracy, maxAccuracy) : defAccuracy,
+                  )
+                : null,
+          );
 
   /// Create a heading stream which is used as default value of
   /// [CurrentLocationLayer.headingStream].
-  Stream<OrientationEvent> defaultHeadingStreamSource() =>
-      RotationSensor.orientationStream;
+  Stream<CompassEvent?> defaultHeadingStreamSource() => FlutterCompass.events!;
 }

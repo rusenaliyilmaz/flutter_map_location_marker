@@ -29,7 +29,7 @@ class CurrentLocationLayer extends StatefulWidget {
   final Stream<LocationMarkerPosition?>? positionStream;
 
   /// A stream that provide heading data for this marker. Defaults to
-  /// [LocationMarkerDataStreamFactory.fromRotationSensorHeadingStream].
+  /// [LocationMarkerDataStreamFactory.fromCompassHeadingStream].
   final Stream<LocationMarkerHeading?>? headingStream;
 
   /// A screen point to align the marker when an 'align position event' is
@@ -439,8 +439,7 @@ class _CurrentLocationLayerState extends State<CurrentLocationLayer>
 
   void _subscriptHeadingStream() {
     final headingStream = widget.headingStream ??
-        const LocationMarkerDataStreamFactory()
-            .fromRotationSensorHeadingStream();
+        const LocationMarkerDataStreamFactory().fromCompassHeadingStream();
     _headingStreamSubscription = headingStream.listen(
       (heading) {
         if (!mounted) {
@@ -536,6 +535,7 @@ class _CurrentLocationLayerState extends State<CurrentLocationLayer>
         max(max(markerRadius, headingSectorRadius), accuracyCircleRadius);
 
     final r = Point(maxRadius, maxRadius);
+    print([camera.nonRotatedSize, Bounds(sp - r, sp + r)]);
     return Bounds(const Point(0, 0), camera.nonRotatedSize)
         .containsPartialBounds(
       Bounds(sp - r, sp + r),
@@ -678,6 +678,7 @@ class _CurrentLocationLayerState extends State<CurrentLocationLayer>
     _rotateMarkerAnimationController = null;
     if (_currentHeadingDifferentTo(heading) > _headingThreshold) {
       if (_inBounds(_currentPosition)) {
+        print(heading.heading);
         _rotateMarkerAnimationController = AnimationController(
           duration: widget.rotateAnimationDuration,
           vsync: this,

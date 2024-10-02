@@ -34,7 +34,7 @@ class _CustomStreamExampleState extends State<CustomStreamExample> {
       );
     _headingStreamController = StreamController()
       ..add(
-        const LocationMarkerHeading(
+        LocationMarkerHeading(
           heading: 0,
           accuracy: pi * 0.2,
         ),
